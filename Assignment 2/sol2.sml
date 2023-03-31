@@ -71,6 +71,50 @@ fun checkMetro(m: metro):bool =
   else false
 ;
 
+(* soultion #3 *)
+datatype 'a lazyList =
+    nullList
+  | cons of 'a * (unit -> 'a lazyList)
+
+fun seq(first,last):int lazyList =
+  if first > last
+  then nullList
+  else
+    let 
+      fun seqHelp() = seq(first+1,last)
+    in
+      cons(first, seqHelp)
+    end
+;
+
+fun infSeq(first):int lazyList =
+  let
+    fun infSeqHelp() = infSeq(first+1)
+  in  
+    cons(first, infSeqHelp)
+  end
+;
+
+(* 얘 수정부터 하면 됨 *)
+fun firstN(lazyListVal: 'a lazyList ,n :int):list =
+  case lazyListVal of
+    nullList => []
+    | (a,b) => a :: firstN(b(),n-1)
+;
+
+
+(*
+(* 익명함수 사용 *) 
+fun seq(first,last):int lazyList =
+  if first > last
+  then nullList
+  else cons(first, fn () => seq(first+1, last))
+;
+
+fun infSeq(first):int lazyList =
+  cons(first, fn () => infSeq(first+1))
+;  
+*)
 
 
 
@@ -112,3 +156,35 @@ val checkMetroTest11 = checkMetro(CONNECT(STATION("a"), AREA("b", STATION "b")))
 val checkMetroTest12 = checkMetro(CONNECT(AREA("a", STATION("a")), AREA("b", STATION "b"))) = true;
 val checkMetroTest13 = checkMetro(CONNECT(AREA("a", STATION("a")), AREA("b", STATION "a"))) = false;
 *)
+
+(* val seqAndfirstNTest1 = firstN(seq(1, 5), 3) = [1, 2, 3];
+val seqAndfirstNTest2 = firstN(seq(~5, 5), 3) = [~5, ~4, ~3];
+val seqAndfirstNTest3 = firstN(seq(1, 5), 10) = [1, 2, 3, 4, 5];
+val seqAndfirstNTest4 = firstN(seq(5, 5), 3) = [5];
+val seqAndfirstNTest5 = firstN(seq(5, 1), 3) = [];
+val seqAndfirstNTest6 = firstN(seq(1, 5), 0) = []; *)
+
+(* val seqAndNthTest1 = Nth(seq(1, 5), 3) = SOME 3;
+val seqAndNthTest2 = Nth(seq(~5, 5), 3) = SOME ~3;
+val seqAndNthTest3 = Nth(seq(5, 5), 3) = NONE;
+val seqAndNthTest4 = Nth(seq(5, 1), 3) = NONE;
+val seqAndNthTest5 = Nth(seq(1, 5), 0) = NONE;
+
+val infSeqAndfisrtNTest1 = firstN(infSeq(1), 3) = [1, 2, 3];
+val infSeqAndfisrtNTest2 = firstN(infSeq(1), 10) = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+val infSeqAndfisrtNTest3 = firstN(infSeq(1), 0) = [];
+val infSeqAndfisrtNTest4 = firstN(infSeq(~10), 3) = [~10, ~9, ~8];
+
+val infSeqAndNthTest1 = Nth(infSeq(1), 3) = SOME 3;
+val infSeqAndNthTest2 = Nth(infSeq(1), 0) = NONE;
+val infSeqAndNthTest3 = Nth(infSeq(1), 1073741823) = SOME 1073741823;
+val infSeqAndNthTest4 = Nth(infSeq(~100), 3) = SOME ~98;
+
+val filterMultiplesTest1 = firstN(filterMultiples(seq(1, 5), 3), 10) = [1, 2, 4, 5];
+val filterMultiplesTest2 = firstN(filterMultiples(seq(1, 20), 2), 5) = [1, 3, 5, 7, 9];
+val filterMultiplesTest3 = firstN(filterMultiples(seq(~5, 5), 3), 5) = [~5, ~4, ~2, ~1, 1];
+val filterMultiplesTest4 = firstN(filterMultiples(seq(~5, 5), 1), 5) = [];
+val filterMultiplesTest5 = firstN(filterMultiples(seq(5, 1), 5), 5) = [];
+
+val primesTest1 = firstN(primes(), 10) = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29];
+val primesTest2 = Nth(primes(), 20) = SOME 71*); *)
