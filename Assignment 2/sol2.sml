@@ -66,7 +66,7 @@ fun checkMetroHelp(m:metro):string list =
 
 (* solution function *)
 fun checkMetro(m: metro):bool =
-  if null checkMetroHelp(m)
+  if null (checkMetroHelp(m))
   then true
   else false
 ;
@@ -95,28 +95,49 @@ fun infSeq(first):int lazyList =
   end
 ;
 
-(* 얘 수정부터 하면 됨 *)
-fun firstN(lazyListVal: 'a lazyList ,n :int):list =
+fun firstN(lazyListVal: 'a lazyList ,n :int):'a list =
+  case (lazyListVal,n) of
+      (nullList,_) => []
+    | (_,0) => []
+    | (cons(first,next),n) => first :: firstN(next(),n-1)
+;
+
+fun Nth(lazyListVal: 'a lazyList ,n :int):'a option =
+  case (lazyListVal,n) of
+      (nullList,_) => NONE
+    | (_,0) => NONE
+    | (cons(first,next),1) => SOME first
+    | (cons(first,next),n) => Nth(next(),n-1)
+; 
+fun filterMultiples(lazyListVal,n)=
   case lazyListVal of
-    nullList => []
-    | (a,b) => a :: firstN(b(),n-1)
+      nullList => nullList
+    | cons(first,getNext) =>
+        let
+          fun skip() = filterMultiples(getNext(),n)
+        in
+          if first mod n = 0
+          then filterMultiples(getNext(),n)
+          else cons(first,skip)
+        end
 ;
 
 
-(*
-(* 익명함수 사용 *) 
-fun seq(first,last):int lazyList =
-  if first > last
-  then nullList
-  else cons(first, fn () => seq(first+1, last))
+fun primes()=
+  let
+    fun sieve(lazyListVal)=
+      case lazyListVal of
+          nullList => nullList
+        | cons(first,getNext) =>
+            let
+              fun sieveHelp() = sieve(filterMultiples(lazyListVal,first))
+            in
+              cons(first,sieveHelp)
+            end
+  in
+    sieve(infSeq(2))
+  end
 ;
-
-fun infSeq(first):int lazyList =
-  cons(first, fn () => infSeq(first+1))
-;  
-*)
-
-
 
 (* (*test 1*)
 val evalTest1 = eval(TRUE) = true;
@@ -139,9 +160,9 @@ val evalTest17 = eval(LESS(NUM(1), NUM(2))) = true;
 val evalTest18 = eval(LESS(PLUS(NUM(1), NUM(2)), NUM(3))) = false;
 val evalTest19 = eval(LESS(MINUS(NUM(1), NUM(2)), NUM(3))) = true;
 val evalTest20 = eval(ANDALSO(LESS(MINUS(NUM(1), NUM(2)), NUM(3)), LESS(NUM(5), PLUS(NUM(42), NUM(15))))) = true;
-*)
 
-(* (*test 2*))
+
+(*test 2*)
 val checkMetroTest1 = checkMetro(AREA("a", STATION "a")) = true;
 val checkMetroTest2 = checkMetro(AREA("a", AREA("a", STATION "a"))) = true;
 val checkMetroTest3 = checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")))) = true;
@@ -155,16 +176,16 @@ val checkMetroTest10 = checkMetro(STATION("a")) = false;
 val checkMetroTest11 = checkMetro(CONNECT(STATION("a"), AREA("b", STATION "b"))) = false;
 val checkMetroTest12 = checkMetro(CONNECT(AREA("a", STATION("a")), AREA("b", STATION "b"))) = true;
 val checkMetroTest13 = checkMetro(CONNECT(AREA("a", STATION("a")), AREA("b", STATION "a"))) = false;
-*)
 
-(* val seqAndfirstNTest1 = firstN(seq(1, 5), 3) = [1, 2, 3];
+(*test3*)
+val seqAndfirstNTest1 = firstN(seq(1, 5), 3) = [1, 2, 3];
 val seqAndfirstNTest2 = firstN(seq(~5, 5), 3) = [~5, ~4, ~3];
 val seqAndfirstNTest3 = firstN(seq(1, 5), 10) = [1, 2, 3, 4, 5];
 val seqAndfirstNTest4 = firstN(seq(5, 5), 3) = [5];
 val seqAndfirstNTest5 = firstN(seq(5, 1), 3) = [];
-val seqAndfirstNTest6 = firstN(seq(1, 5), 0) = []; *)
+val seqAndfirstNTest6 = firstN(seq(1, 5), 0) = [];
 
-(* val seqAndNthTest1 = Nth(seq(1, 5), 3) = SOME 3;
+val seqAndNthTest1 = Nth(seq(1, 5), 3) = SOME 3;
 val seqAndNthTest2 = Nth(seq(~5, 5), 3) = SOME ~3;
 val seqAndNthTest3 = Nth(seq(5, 5), 3) = NONE;
 val seqAndNthTest4 = Nth(seq(5, 1), 3) = NONE;
@@ -185,6 +206,6 @@ val filterMultiplesTest2 = firstN(filterMultiples(seq(1, 20), 2), 5) = [1, 3, 5,
 val filterMultiplesTest3 = firstN(filterMultiples(seq(~5, 5), 3), 5) = [~5, ~4, ~2, ~1, 1];
 val filterMultiplesTest4 = firstN(filterMultiples(seq(~5, 5), 1), 5) = [];
 val filterMultiplesTest5 = firstN(filterMultiples(seq(5, 1), 5), 5) = [];
-
+ *)
 val primesTest1 = firstN(primes(), 10) = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29];
-val primesTest2 = Nth(primes(), 20) = SOME 71*); *)
+val primesTest2 = Nth(primes(), 20) = SOME 71;
