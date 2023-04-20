@@ -1,0 +1,131 @@
+fun map (f, xs) =
+  case xs of
+      [] => []
+    | x::xs' => f(x)::map(f, xs')
+
+fun filter(f, xs) = 
+  case xs of
+    [] => [] 
+  | x::xs' => if f x then x::filter(f, xs') 
+                     else filter(f, xs')
+
+fun fold(f, acc, xs) = 
+    case xs of 
+      []     => acc
+    | x::xs' => fold(f, (f(acc,x)), xs')
+
+    
+fun foldr(f, acc, xs) = 
+    case xs of 
+      []     => acc
+    | x::xs' => f(foldr(f, acc, xs'),x)
+
+
+(* use fold to find max in a list *)
+
+val ints = [1,9,5,1]
+val mymax = fold (fn (acc, x) =>  if x>acc then x else acc,
+                          hd(ints), ints)
+
+val nums_list = [[9, 40, 75, 7],
+                 [64, 34, 88, 96],
+                 [91, 92, 53, 31],
+                 [50, 84, 73, 65],
+                 [54, 44, 75, 11],
+                 [91, 71, 48, 46],
+                 [70, 72, 5, 42],
+                 [25, 77, 49, 56],
+                 [89, 4, 73, 52],
+                 [36, 56, 61, 1]]
+(* fun fold(f, acc, xs) *)
+fun my_local_max lists = map( (fn xs => fold( (fn (acc,x)=> if acc>x then acc else x), hd(xs),  xs )), lists)
+
+
+(* let's find local max by applying fold to each list *)
+val local_max = fn nums_list => 
+    map(fn nums => 
+           fold (fn (acc, x) =>  if x>acc then x else acc,
+                          hd(nums), nums),
+        nums_list)
+                
+(* [75, 96, ... ] *)
+
+fun my_global_max lists = 
+  fold( (fn(x,y) =>if x>y then x else y), hd(local_max lists) ,local_max(lists))
+;
+
+(* now apply fold again! *)
+val global_max = fn nums_list => 
+  fold (fn (acc, x) =>  if x>acc then x else acc,
+        hd(local_max nums_list), local_max nums_list)
+              
+
+(* given x, count the multiples of x in each list
+ * x=11, num_list= [[1, 2, 11], [2, 3, 22, 33], [4, 5]]
+ * ==>   [1, 2, 0]
+ *)
+
+(* 1. apply modular (filter) to *each* list
+ * ==> [[11], [22, 33], []]
+ * 2. count *each* list
+ * ==> [1, 2, 0]
+ *)
+(* filter(f, xs) *)
+
+fun count_multiples (x, nums_list) =
+  let val multiples = 
+    foldr( fn (acc,nums_list) => filter(fn (num) => (num mod x) = 0, nums_list) :: acc, [], nums_list)
+  in
+    map(length, multiples)
+  end
+
+
+(* similar to above, given x, count the multiples of x in each list
+ * and returns the index of the list having the maximum count.
+ * x=11, [[1, 2, 11], [11, 22, 33], [4, 5]]
+ * ==>   1  
+ *)
+
+(* 1. call count_multiples above
+ * 2. apply fold. acc = (max_index, curr_index, max_value)
+ * hint: keep acc tuple containing (index of current max, current index, max multiples)
+ *  e.g. x=11, [[1, 2, 11], [11, 22, 33], [4, 5], [11, 22, 33, 44]] 
+ *       counts= [ 1,         3,             0,           4]
+ *           (0, 0, 1) ==> (1, 1, 3) ==> (1, 2, 3) ==> (3, 3, 4)
+ *                  (0, 1, 1)     (1, 2, 3)    (1, 3, 3)
+ *)
+
+fun index_of_max_multiple_count_my (x, nums_list) =
+  let val counts = count_multiples(x,nums_list)
+  in
+    fold( ( fn ((max_index, curr_index, max_value),y) => if max_value<y then (curr_index+1,curr_index+1,y) else (max_index,curr_index+1,max_value) ) ,(0,~1,0),counts)
+  end
+
+
+fun index_of_max_multiple_count (x, nums_list) = 
+let val counts = count_multiples(x, nums_list)
+(*   [1, 3, 3] *)
+in
+    fold(fn (acc, y) => if (#3 acc) > y
+                        then (#1 acc, 1+(#2 acc), #3 acc)
+                        else (#2 acc, 1+(#2 acc), y),
+        (0, 0, hd(counts)),
+        counts)
+end
+
+(*
+   (* the above implemented using record type instead of tuples*)
+    fold(fn acc, y => if #maxVal acc > y
+                        then 
+                          {maxIdx=#maxIdx acc, 
+                           currIdx=1+(#currIdx acc),
+                           maxVal=#maxVal acc}
+                        else
+                          {maxIdx=#currIdx acc,
+                           currIdx=1+(#currIdx acc),
+                           maxVal=y}
+        {maxIdx=0, currIdx=0, maxVal=hd(counts)},
+        counts)
+*)
+
+(* {maxIdx:int, currIdx:int, maxVal:int} *)
