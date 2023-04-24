@@ -34,12 +34,24 @@ fun is_flush (hand: card list) =
   |  Card(suit,val) *)
 
 
-(* fun hasAce (hand: card list) =
-
+fun hasAce (hand: card list) =
+  case hand of
+    [] => false
+  | Card(_,Ace)::xs => true
+  | _::xs => hasAce(xs)
 
 fun removeFirstAce (hand: card list) =
+  case hand of
+    [] => []
+  | Card(_,Ace)::xs => xs
+  | x::xs => x::(removeFirstAce(xs))
 
 fun simpleSum(hand: card list) =
+  case hand of 
+        Card (_, Ace)::rest => 11 + simpleSum(rest)
+      | Card (_, Num(i))::rest => i + simpleSum(rest)
+      | Card (_, _)::rest => 10 + simpleSum(rest)
+      | _ => 0
 
 
 fun blackjack(hand: card list) =
@@ -52,7 +64,7 @@ in
          else sum
 end
 
-(*
+
 fun blackjack (hand: card list) =
 let fun simpleSum (hand: card list) =
         case hand of 
@@ -67,7 +79,8 @@ in
   else score
 end
 
-*)
+
+
 
 fun blackjack (score: int, hand: card list) =
   case hand of
@@ -83,6 +96,7 @@ fun blackjack (score: int, hand: card list) =
 
 
 
+
 fun blackjack2 (score: int, hand: card list) =
   case hand of
       Card (_, Ace)::rest => let val rest_score = blackjack2(score, rest)
@@ -93,4 +107,4 @@ fun blackjack2 (score: int, hand: card list) =
                              end
       | Card (_, Num(i))::rest => blackjack2(score+i, rest)
       | Card (_, _)::rest => blackjack2(score+10, rest)
-      | _ => score *)
+      | _ => score 

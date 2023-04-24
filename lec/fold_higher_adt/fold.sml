@@ -21,6 +21,7 @@ fun foldr(f, acc, xs) =
     | x::xs' => f(foldr(f, acc, xs'),x)
 
 
+
 (* use fold to find max in a list *)
 
 val ints = [1,9,5,1]

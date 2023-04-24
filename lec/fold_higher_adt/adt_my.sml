@@ -15,7 +15,7 @@ val empty_set =
     fun make_set xs = 
         let fun contains i = List.exists (fn x => i=x) xs
         in
-            S({insert = fn i => if contains(i)
+            S{insert = fn i => if contains(i)
                                 then make_set(xs)
                                 else make_set(i::xs),
                 member = contains,
@@ -23,7 +23,7 @@ val empty_set =
                 delete = fn i => if contains(i)
                                   then make_set(List.filter (fn x => x <> i) xs)
                                   else make_set(xs)
-            })
+            }
         end
   in
     make_set [] (*  set value S{...}*)
