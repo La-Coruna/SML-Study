@@ -229,33 +229,51 @@ Expr eval_under_env(Expr e, std::map<string, Expr> env) {
         },
 
         // TODO: Students need to implement following functions.
-        [&](AUnit& au) { /* TODO */ },
+        [&](AUnit& au) { return e; },
         [&](box<struct IsAUnit>& isa) { 
-            /* TODO */
+            return e;
         },
         [&](box<struct IfGreater>& ifgt) {
             /* TODO */
+            /* 
+                ifgt->e2 (이런식으로 넘겨줘야함. box된 struct이기 때문에. )
+                Closure(*ifgt) 이렇게 에스터리스크로 넘겨주면 안됨
+             */
+            Expr e1 = eval_under_env(ifgt->e1, env);
+            Expr e2 = eval_under_env(ifgt->e2, env);
+            if (is<Int>(e1) && is<Int>(e2)) {
+                Int i1 = std::get<Int>(e1);
+                Int i2 = std::get<Int>(e2);
+                if (i1.val > i2.val){
+                    return eval_under_env(ifgt->e3, env);
+                } else {
+                    return eval_under_env(ifgt->e4, env);
+                } /* else {
+                    throw std::runtime_error("Unexpected types for condition of IfGreater");
+                } */
+            }
+            return e;
         }, 
         [&](box<struct MLet>& l) {
-            /* TODO */
+            return e;
         },
         [&](box<struct Fun>& f) {
-            /* TODO */
+            return e;
         },
         [&](box<struct Closure>& c) {
-            /* TODO */
+            return e;
         },
         [&](box<struct APair>& ap) {
-            /* TODO */
+            return e;
         },
         [&](box<struct Fst>& fst) { 
-            /* TODO */
+            return e;
         },
         [&](box<struct Snd>& snd) { 
-            /* TODO */
+            return e;
         },
         [&](box<struct Call>& call) {
-            /* TODO */
+            return e;
         },
       }, e);
 }
@@ -349,3 +367,9 @@ int main() {
 
     return 0;
 }
+
+/* 
+!./c
+fg
+!./a.
+ */
