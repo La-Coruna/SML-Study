@@ -229,58 +229,33 @@ Expr eval_under_env(Expr e, std::map<string, Expr> env) {
         },
 
         // TODO: Students need to implement following functions.
-        [&](AUnit& au) { /* TODO */ 
-            return e;
-        },
+        [&](AUnit& au) { /* TODO */ },
         [&](box<struct IsAUnit>& isa) { 
             /* TODO */
-            return e;
         },
         [&](box<struct IfGreater>& ifgt) {
             /* TODO */
-            Expr e1 = eval_under_env(ifgt->e1, env);
-            Expr e2 = eval_under_env(ifgt->e2, env);
-            if (is<Int>(e1) && is<Int>(e2)) {
-              Int i1 = std::get<Int>(e1);
-              Int i2 = std::get<Int>(e2);
-              if (i1.val > i2.val) {
-                return eval_under_env(ifgt->e3, env);
-              } else {
-                return eval_under_env(ifgt->e4, env);
-              }
-            } else {
-                throw std::runtime_error("Unexpected types for the condition of IfGreater");
-            }
-
-            return ifgt->e4;
         }, 
         [&](box<struct MLet>& l) {
             /* TODO */
-            return e;
         },
         [&](box<struct Fun>& f) {
             /* TODO */
-            return e;
         },
         [&](box<struct Closure>& c) {
             /* TODO */
-            return e;
         },
         [&](box<struct APair>& ap) {
             /* TODO */
-            return e;
         },
         [&](box<struct Fst>& fst) { 
             /* TODO */
-            return e;
         },
         [&](box<struct Snd>& snd) { 
             /* TODO */
-            return e;
         },
         [&](box<struct Call>& call) {
             /* TODO */
-            return e;
         },
       }, e);
 }
@@ -306,7 +281,6 @@ Expr IfAUnit(Expr e1, Expr e2, Expr e3) {
     return IfGreater(IsAUnit(e1), Int(0), e2, e3);
 }
 
-/*
 Expr MuplMap() {
     // TODO
 
@@ -317,7 +291,8 @@ Expr MuplMap() {
     //           then AUnit()
     //           else APair(fun_arg(Fst(lst)),
     //                      muplrec(Snd(lst)))             
-    //    in muplrec
+    //    in
+    //      muplrec /* UPDATED */
     //    end
 }
 
@@ -328,7 +303,6 @@ Expr MuplMapAddN() {
     //    fn I => map(fn x => x+I)
     // end
 }
-*/
 
 int main() {
     // Test code for eval()
@@ -340,23 +314,6 @@ int main() {
     Int i = std::get<Int>(res);
     std::cout << toString(e) << " = " << i.val << std::endl;
 
-    e = IfGreater(Var("a"), Int(42), Int(1), Int(2));
-    res = eval_under_env(e, env);
-    i = std::get<Int>(res);
-    std::cout << toString(e) << " = " << i.val << std::endl;
-
-    e = IfGreater(Int(42), Var("a"), Int(1), Int(2));
-    res = eval_under_env(e, env);
-    i = std::get<Int>(res);
-    std::cout << toString(e) << " = " << i.val << std::endl;
-
-    e = IfGreater(Int(42), Var("a"), Add(Int(1),Int(1)), Add(Int(2),Int(2)));
-    res = eval_under_env(e, env);
-    i = std::get<Int>(res);
-    std::cout << toString(e) << " = " << i.val << std::endl;
-
-
-/*
     Expr e2 = MLet("a", Int(5), MLet("b", Int(10), Add(Var("a"), Var("b"))));
     res = eval_under_env(e2, env);
     i = std::get<Int>(res);
@@ -390,7 +347,6 @@ int main() {
 
     Expr e8 = eval(Call(Call(MuplMapAddN(), Int(10)), makeIntList(0, 5)));
     std::cout << toString(e8) << " = " << toString(e8) << std::endl;
-    */
 
     return 0;
 }
