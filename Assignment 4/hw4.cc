@@ -229,15 +229,19 @@ Expr eval_under_env(Expr e, std::map<string, Expr> env) {
         },
 
         // TODO: Students need to implement following functions.
-        [&](AUnit& au) { /* TODO */ 
+        [&](AUnit& au) { /* TODO OK */ 
             return e;
         },
         [&](box<struct IsAUnit>& isa) { 
-            /* TODO */
-            return e;
+            /* TODO OK */
+            Expr e1 = eval_under_env(isa->e, env);
+            Expr res = Int(0);
+            if(is<AUnit>(e1))
+                res = Int(1);
+            return res;
         },
         [&](box<struct IfGreater>& ifgt) {
-            /* TODO */
+            /* TODO OK */
             Expr e1 = eval_under_env(ifgt->e1, env);
             Expr e2 = eval_under_env(ifgt->e2, env);
             if (is<Int>(e1) && is<Int>(e2)) {
@@ -256,15 +260,25 @@ Expr eval_under_env(Expr e, std::map<string, Expr> env) {
         }, 
         [&](box<struct MLet>& l) {
             /* TODO */
-            return e;
+            //TODO 밖에서 못 사용하게 하도록..?
+            std::map<string, Expr> let_env = env;
+            Expr e1 = eval_under_env(l->e1, let_env);
+            env.insert_or_assign(l->varName, e1);
+            Expr e2 = eval_under_env(l->e2, let_env);
+            return e2;
         },
         [&](box<struct Fun>& f) {
             /* TODO */
-            return e;
+            //TODO 함수 밖에선 못 쓰게 해야하나?
+            //TODO 함수 밖에서 썼던 값 가져오도록.?
+            std::map<string, Expr> fun_env = env;
+            fun_env.insert_or_assign(f->funName, f); //@ ""이면 아예 이 코드가 실행이 안 되도록 해야하나?
+            Expr closure = Closure(fun_env,*f);
+            return closure;
         },
         [&](box<struct Closure>& c) {
             /* TODO */
-            return e;
+            return c;
         },
         [&](box<struct APair>& ap) {
             /* TODO */
@@ -280,7 +294,18 @@ Expr eval_under_env(Expr e, std::map<string, Expr> env) {
         },
         [&](box<struct Call>& call) {
             /* TODO */
-            return e;
+            Expr res;
+            Expr closure = eval_under_env(call->funExpr, env);
+            if (is<Closure>(call->funExpr)) {
+                std::map<string, Expr> fun_env = eval_under_env(closure,).env; //TODO 에러있대
+                Fun fun = closure.f;
+                
+                fun_env.insert_or_assign(fun.argName, call->actual);
+                res = eval_under_env(fun.body,fun_env);
+            } else {
+                throw std::runtime_error("Unexpected types for the condition of Call's first argument. It should be a Closure.");
+            }
+            return res;
         },
       }, e);
 }
@@ -355,13 +380,30 @@ int main() {
     i = std::get<Int>(res);
     std::cout << toString(e) << " = " << i.val << std::endl;
 
+    // AUnit
+    e = AUnit();
+    res = eval_under_env(e, env);
+    std::cout << toString(e) << std::endl;
 
-/*
+    // isAUnit 1
+    e = IsAUnit(AUnit());
+    res = eval_under_env(e, env);
+    i = std::get<Int>(res);
+    std::cout << toString(e) << " = " << i.val << std::endl;
+
+    // isAUnit 2
+    e = IsAUnit(Int(4));
+    res = eval_under_env(e, env);
+    i = std::get<Int>(res);
+    std::cout << toString(e) << " = " << i.val << std::endl;
+
+    // Mlet //TODO MLet에서 벗어나면 못사용하게 해야하나?
     Expr e2 = MLet("a", Int(5), MLet("b", Int(10), Add(Var("a"), Var("b"))));
     res = eval_under_env(e2, env);
     i = std::get<Int>(res);
     std::cout << toString(e2) << " = " << i.val << std::endl;
 
+/*
     res = eval(e2);
     i = std::get<Int>(res);
     std::cout << toString(e2) << " = " << i.val << std::endl;
