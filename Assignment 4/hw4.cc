@@ -261,10 +261,8 @@ Expr eval_under_env(Expr e, std::map<string, Expr> env) {
         [&](box<struct MLet>& l) {
             /* TODO */
             Expr e1 = eval_under_env(l->e1, env);
-            // std::cout << "MLet의 e1: " << toString(e1) << std::endl;
             std::map<string, Expr> let_env = makeNewEnvFrom(env);
             let_env.insert_or_assign(l->varName, e1);
-            // std::cout << "MLet으로 인해 "<<l->varName<<": " << toString(e1) << std::endl<< std::endl;
             Expr e2 = eval_under_env(l->e2, let_env);
 
             return e2;
@@ -272,10 +270,8 @@ Expr eval_under_env(Expr e, std::map<string, Expr> env) {
         [&](box<struct Fun>& f) {
             /* TODO */
             std::map<string, Expr> fun_env = makeNewEnvFrom(env);
-            //fun_env.insert_or_assign(f->funName, f); //@ ""이면 아예 이 코드가 실행이 안 되도록 해야하나?
-            struct Closure closure = Closure(fun_env,*f);
-            closure.env.insert_or_assign(f->funName, closure); //@ ""이면 아예 이 코드가 실행이 안 되도록 해야하나?
-            return (Expr)closure;
+            Expr closure = Closure(fun_env,*f);
+            return closure;
         },
         [&](box<struct Closure>& c) {
             /* TODO */
@@ -293,7 +289,7 @@ Expr eval_under_env(Expr e, std::map<string, Expr> env) {
             Expr ap_expr = eval_under_env(fst->e, env);
             APair ap = *std::get<box<struct APair>>(ap_expr);
 
-            Expr res = eval_under_env(ap.e1,env);
+            Expr res = ap.e1;
             return res;
         },
         [&](box<struct Snd>& snd) { 
@@ -301,30 +297,21 @@ Expr eval_under_env(Expr e, std::map<string, Expr> env) {
             Expr ap_expr = eval_under_env(snd->e, env);
             APair ap = *std::get<box<struct APair>>(ap_expr);
 
-            Expr res = eval_under_env(ap.e2,env);
+            Expr res = ap.e2;
             return res;
         },
         [&](box<struct Call>& call) {
             /* TODO */
             Expr res = 0;
-            std::cout<<"계산전 인자: "<<toString(call->actual)<<std::endl;
             Expr arg = eval_under_env(call->actual, env);
-            std::cout<<"계산된 인자: "<<toString(arg)<<std::endl;
-            std::cout<< "클로저 계산 시작 - "<< toString(call->funExpr) <<std::endl;
             Expr closure_expr = eval_under_env(call->funExpr, env);
-            std::cout<< "클로저 계산 끝 - " << toString(closure_expr) <<std::endl<<std::endl;
             if (is<Closure>(closure_expr)) {
                 Closure closure = *std::get<box<struct Closure>>(closure_expr);
                 std::map<string, Expr> fun_env = makeNewEnvFrom(closure.env);
                 Fun fun = closure.f;
-                fun_env.insert_or_assign(fun.funName, closure); //@@
-
-                fun_env.insert_or_assign(fun.argName, arg);
-            std::cout<<"결국 인자: "<<toString(arg)<<std::endl;
-
-            std::cout << "통곡의 벽 on with " << fun.funName << "- 뭐에서 걸렸냐?: " << toString(fun.body) << std::endl;
+                fun_env.insert_or_assign(fun.funName, closure); // for recursion
+                fun_env.insert_or_assign(fun.argName, arg); // to use arg
                 res = eval_under_env(fun.body, fun_env);
-            std::cout << "통곡의 벽 out with " << fun.funName  << std::endl << std::endl;
             } else {
                 throw std::runtime_error("Unexpected types for the condition of Call's first argument. It should be a Closure.");
             }
@@ -354,11 +341,6 @@ Expr IfAUnit(Expr e1, Expr e2, Expr e3) {
     return IfGreater(IsAUnit(e1), Int(0), e2, e3);
 }
 
-// Expr MuplMap_old(Fun f) {
-//     /* Fun(함수이름, 인자이름, 함수 바디) */
-//     return Fun("", "list" , IfAUnit(Var("list"), AUnit(), APair( Call( f, (Fst(Var("list")))), Call(MuplMap_old(f),Snd(Var("list")) ))) );
-// }
-
 Expr MuplMap() {
     /*
     pseudo code in ML:
@@ -371,45 +353,20 @@ Expr MuplMap() {
        in muplrec
        end
     */
-    return Fun("맵", "fun_arg", MLet("muplrec",Fun("muplrec", "lst",IfAUnit(Var("lst"),AUnit(),APair(Call(Var("fun_arg"),Fst(Var("lst"))),Call(Var("muplrec"), Snd(Var("lst")))))),Var("muplrec")));
-    //return Fun("", "fun_arg", Fun("muplrec", "lst",IfAUnit(Var("lst"),AUnit(),APair(Call(Var("fun_arg"),Fst(Var("lst"))),Call(Var("muplrec"), Snd(Var("lst")))))));
+    return Fun("", "fun_arg", MLet("muplrec",Fun("muplrec", "lst",IfAUnit(Var("lst"),AUnit(),APair(Call(Var("fun_arg"),Fst(Var("lst"))),Call(Var("muplrec"), Snd(Var("lst")))))),Var("muplrec")));
 }
 
 
 Expr MuplMapAddN() {
-    // return Fun("", "I", MuplMap(Fun("", "x", Add(Var("x"),Var("I"))))); // old_version
-    return MLet("map",MuplMap(),Fun("맵 애드 엔","I",Call(Var("map"),Fun("맵 안에 넣을 함수", "x", Add(Var("x"),Var("I"))))));
-    // TODO
-    // pseudo code in ML:
-    // let val map = MuplMap()
-    // in
-    //    fn I => map(fn x => x+I)
-    // end
-}
-
-/*
-Expr MuplMap() {
-    TODO
-
+    /*
     pseudo code in ML:
-    fn fun_arg =>
-       let fun muplrec(lst) =
-              if IsAUnit(lst)
-              then AUnit()
-              else APair(fun_arg(Fst(lst)),
-                         muplrec(Snd(lst)))             
-       in muplrec
-       end
-}
+    let val map = MuplMap()
+    in
+       fn I => map(fn x => x+I)
 
-Expr MuplMapAddN() {
-    // TODO
-    // pseudo code in ML:
-    // let val map = MuplMap() in
-    //    fn I => map(fn x => x+I)
-    // end
+    end */
+    return MLet("map",MuplMap(),Fun("","I",Call(Var("map"),Fun("", "x", Add(Var("x"),Var("I"))))));
 }
-*/
 
 //! warm-up
 
@@ -445,85 +402,85 @@ void print2(List<T> lst)
 int main() {
     // Test code for eval()
     std::map<string, Expr> env;
-    // env.insert_or_assign("a", Expr(Int(40)));
+    env.insert_or_assign("a", Expr(Int(40)));
 
-    // Expr e = Add(Var("a"), Int(2));
-    // Expr res = eval_under_env(e, env);
-    // Int i = std::get<Int>(res);
-    // std::cout << toString(e) << " = " << i.val << std::endl;
+    Expr e = Add(Var("a"), Int(2));
+    Expr res = eval_under_env(e, env);
+    Int i = std::get<Int>(res);
+    std::cout << toString(e) << " = " << i.val << std::endl;
 
-    // e = IfGreater(Var("a"), Int(42), Int(1), Int(2));
-    // res = eval_under_env(e, env);
-    // i = std::get<Int>(res);
-    // std::cout << toString(e) << " = " << i.val << std::endl;
+    e = IfGreater(Var("a"), Int(42), Int(1), Int(2));
+    res = eval_under_env(e, env);
+    i = std::get<Int>(res);
+    std::cout << toString(e) << " = " << i.val << std::endl;
 
-    // e = IfGreater(Int(42), Var("a"), Int(1), Int(2));
-    // res = eval_under_env(e, env);
-    // i = std::get<Int>(res);
-    // std::cout << toString(e) << " = " << i.val << std::endl;
+    e = IfGreater(Int(42), Var("a"), Int(1), Int(2));
+    res = eval_under_env(e, env);
+    i = std::get<Int>(res);
+    std::cout << toString(e) << " = " << i.val << std::endl;
 
-    // e = IfGreater(Int(42), Var("a"), Add(Int(1),Int(1)), Add(Int(2),Int(2)));
-    // res = eval_under_env(e, env);
-    // i = std::get<Int>(res);
-    // std::cout << toString(e) << " = " << i.val << std::endl;
+    e = IfGreater(Int(42), Var("a"), Add(Int(1),Int(1)), Add(Int(2),Int(2)));
+    res = eval_under_env(e, env);
+    i = std::get<Int>(res);
+    std::cout << toString(e) << " = " << i.val << std::endl;
 
-    // // AUnit
-    // e = AUnit();
-    // res = eval_under_env(e, env);
-    // std::cout << toString(e) << std::endl;
+    // AUnit
+    e = AUnit();
+    res = eval_under_env(e, env);
+    std::cout << toString(e) << std::endl;
 
-    // // isAUnit 1
-    // e = IsAUnit(AUnit());
-    // res = eval_under_env(e, env);
-    // i = std::get<Int>(res);
-    // std::cout << toString(e) << " = " << i.val << std::endl;
+    // isAUnit 1
+    e = IsAUnit(AUnit());
+    res = eval_under_env(e, env);
+    i = std::get<Int>(res);
+    std::cout << toString(e) << " = " << i.val << std::endl;
 
-    // // isAUnit 2
-    // e = IsAUnit(Int(4));
-    // res = eval_under_env(e, env);
-    // i = std::get<Int>(res);
-    // std::cout << toString(e) << " = " << i.val << std::endl;
+    // isAUnit 2
+    e = IsAUnit(Int(4));
+    res = eval_under_env(e, env);
+    i = std::get<Int>(res);
+    std::cout << toString(e) << " = " << i.val << std::endl;
 
-    // // Mlet
-    // Expr e2 = MLet("a", Int(5), MLet("b", Int(10), Add(Var("a"), Var("b"))));
-    // res = eval_under_env(e2, env);
-    // i = std::get<Int>(res);
-    // std::cout << toString(e2) << " = " << i.val << std::endl;
+    // Mlet
+    Expr e2 = MLet("a", Int(5), MLet("b", Int(10), Add(Var("a"), Var("b"))));
+    res = eval_under_env(e2, env);
+    i = std::get<Int>(res);
+    std::cout << toString(e2) << " = " << i.val << std::endl;
 
-    // res = eval(e2);
-    // i = std::get<Int>(res);
-    // std::cout << toString(e2) << " = " << i.val << std::endl;
+    res = eval(e2);
+    i = std::get<Int>(res);
+    std::cout << toString(e2) << " = " << i.val << std::endl;
 
 
-    // Expr e3 = Call(Fun("add1", "x", Add(Var("x"), Int(1))), Int(41));
-    // res = eval_under_env(e3, env);
-    // i = std::get<Int>(res);
-    // std::cout << toString(e3) << " = " << i.val << std::endl; 
+    Expr e3 = Call(Fun("add1", "x", Add(Var("x"), Int(1))), Int(41));
+    res = eval_under_env(e3, env);
+    i = std::get<Int>(res);
+    std::cout << toString(e3) << " = " << i.val << std::endl; 
 
-    // Expr e4 = IfGreater(Int(0), Int(1), Int(42), Int(-42));
-    // res = eval_under_env(e4, env);
-    // std::cout << toString(e4) << " = " << toString(res) << std::endl; 
+    Expr e4 = IfGreater(Int(0), Int(1), Int(42), Int(-42));
+    res = eval_under_env(e4, env);
+    std::cout << toString(e4) << " = " << toString(res) << std::endl; 
 
-    // Expr e5 = MLet("a", Int(5), Add(Var("a"), MLet("a", Int(10), Add(Var("a"), Int(1)))));
-    // res = eval_under_env(e5, env);
-    // std::cout << toString(e5) << " = " << toString(res) << std::endl;
+    Expr e5 = MLet("a", Int(5), Add(Var("a"), MLet("a", Int(10), Add(Var("a"), Int(1)))));
+    res = eval_under_env(e5, env);
+    std::cout << toString(e5) << " = " << toString(res) << std::endl;
 
-    // Expr e6 = APair(Add(Int(0), Int(10)), APair(Int(1), AUnit()));
-    // res = eval_under_env(e6, env);
-    // std::cout << toString(e6) << " = " << toString(res) << std::endl;
+    Expr e6 = APair(Add(Int(0), Int(10)), APair(Int(1), AUnit()));
+    res = eval_under_env(e6, env);
+    std::cout << toString(e6) << " = " << toString(res) << std::endl;
 
-    // Expr e7 = makeIntList(0, 2);
-    // std::cout << toString(e7) << " = " << toString(e7) << std::endl;
+    Expr e7 = makeIntList(0, 2);
+    std::cout << toString(e7) << " = " << toString(e7) << std::endl;
 
-    // List<Expr> e6_list = FromMuplList(e6);
-    // print2(e6_list);
-    // Expr e6_list_rollback = ToMuplList(e6_list);
-    // std::cout << toString(e6_list_rollback) << std::endl;
+    List<Expr> e6_list = FromMuplList(e6);
+    print2(e6_list);
+    Expr e6_list_rollback = ToMuplList(e6_list);
+    std::cout << toString(e6_list_rollback) << std::endl;
 
-    // List<Expr> e6_val_list = FromMuplList(res);
-    // print2(e6_val_list);
-    // Expr e6_val_list_rollback = ToMuplList(e6_val_list);
-    // std::cout << toString(e6_val_list_rollback) << std::endl;
+    List<Expr> e6_val_list = FromMuplList(res);
+    print2(e6_val_list);
+    Expr e6_val_list_rollback = ToMuplList(e6_val_list);
+    std::cout << toString(e6_val_list_rollback) << std::endl;
 
 
     Expr e8 = eval(Call(Call(MuplMapAddN(), Int(10)), makeIntList(0, 5)));
